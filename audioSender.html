@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+	<head>
+		<title>这个是发送页面</title>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" >
+		<link rel="shortcut icon" href="/favicon.ico" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<link rel="stylesheet" type="text/css" href="resources/css/common.css" />
+		<script src="resources/js/jquery.js" type="text/javascript" ></script>
+		<script type="text/javascript" src="resources/js/recorder.js"></script>
+	</head>
+	<body>
+		<div id="page" class="relative fullscreen">
+			这个是发送页面
+		</div>
+		<script type="text/javascript">
+		var storage = window.localStorage,
+			AudioContext = window.AudioContext || window.webkitAudioContext,
+			audioContext,
+			localStream = null, data_timeHandler;
+		var URL = (window.URL || window.webkitURL || window.msURL || window.oURL);
+		var getUserMedia = (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
+		var ws = new WebSocket('ws://' + location.hostname+ (location.port === '' ? '' : ':' + location.port + '/'));
+		ws.binaryType = "arraybuffer";
+		ws.onopen = function(msg) {
+			console.log('log in success');
+		};
+		ws.onmessage = function(msg) {
+			var data = msg.data;
+		};
+		ws.onclose = function(msg) {
+			console.log('link closed');
+		};
+		ws.onerror = function(msg) {
+			console.log('link error');
+		};
+		function connectDevice(success) {
+			getUserMedia.call(navigator, {audio: true}, function(stream) {
+				localStream = stream;
+				initRecordAudio(stream);
+				success && success(stream);
+			}, function() {
+				alert('你的浏览器不支持');
+			});
+		}
+		function disconnectDevice() {
+			localStream && localStream.stop();
+		}
+		function initRecordAudio(stream) {
+			if (!audioContext) {
+				audioContext = new AudioContext();
+			}
+			inputPoint = audioContext.createGain();
+			audioInput = audioContext.createMediaStreamSource(stream);
+			audioInput.connect(inputPoint);
+			audioRecorder = new Recorder(inputPoint);
+			audioRecorder.record();
+		}
+		function sendRecordAudio(callback) {
+			audioRecorder && audioRecorder.exportWAV(function(dataview) {
+				ws && ws.send(dataview);
+				audioRecorder.clear();
+			});
+		}
+		function stopRecordAudio() {
+			audioRecorder && audioRecorder.stop();
+			audioRecorder && audioRecorder.clear();
+			disconnectDevice();
+			localStream = null;
+		}
+		connectDevice(function(stream) {
+			var lastTime = new Date(), idx = 20;
+			data_timeHandler = setInterval(function() {
+				sendRecordAudio();
+			}, 50);
+		});
+		</script>
+	</body>
+</html>		

@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+	<head>
+		<title>这个是接收页面</title>
+		<meta charset="utf-8" />
+		<link href="resources/css/common.css" rel="stylesheet" type="text/css" />
+		<script src="resources/js/jquery.js" type="text/javascript" ></script>
+	</head>
+	<body>
+		<div id="Page">
+			这个是接收页面
+		</div>
+	</body>
+	<script type="text/javascript">
+	var ws = new WebSocket('ws://' + location.hostname + (location.port === '' ? '' : ':' + location.port + '/'));
+	var AudioContext = window.AudioContext || window.webkitAudioContext,
+		audioContext = new AudioContext(),
+		URL = (window.URL || window.webkitURL || window.msURL || window.oURL);
+	ws.binaryType = "arraybuffer";
+	ws.onopen = function(msg) {
+		console.log('log in success');
+	};
+	ws.onmessage = function(msg) {
+		var data = msg.data;
+		console.log('receive data');
+		if (typeof data === 'string') {
+			//string
+		} else {
+			//create date
+			audioContext.decodeAudioData(data, function(buffer) {
+				var source = audioContext.createBufferSource();
+				source.buffer = buffer;
+				source.connect(audioContext.destination);
+				source.start(0); 
+			});
+			return;
+		}
+	};
+	ws.onclose = function(msg) {
+		console.log('link closed');
+	};
+	ws.onerror = function(msg) {
+		console.log('link error');
+	};
+	</script>
+</html>
